@@ -1,15 +1,16 @@
 package com.krooj.docuserv.dm;
 
-import com.krooj.docuserv.domain.Document;
-import com.krooj.docuserv.domain.DocuservDomainException;
-import com.krooj.docuserv.domain.InMemoryDocument;
-
-import javax.enterprise.inject.Default;
-import javax.inject.Named;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.ConcurrentHashMap;
+
+import javax.enterprise.inject.Default;
+import javax.inject.Named;
+
+import com.krooj.docuserv.domain.Document;
+import com.krooj.docuserv.domain.DocuservDomainException;
+import com.krooj.docuserv.domain.InMemoryDocument;
 
 /**
  * In-memory implementation of a document store, backed by a concurrent hash map.
@@ -22,7 +23,7 @@ public class InMemoryDocumentDataMapperImpl extends AbstractDocumentDataMapper{
 
     @Override
     public void createDocument(Document document, InputStream documentInputStream) throws DocumentDMException {
-        validateNotNull(document, "document May not be null");
+        validateNotNull(document, "document may not be null");
         validateNotNull(documentInputStream, "documentInputStream may not be null");
         try (
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -86,7 +87,7 @@ public class InMemoryDocumentDataMapperImpl extends AbstractDocumentDataMapper{
 
             document.setDocumentContents(out.toByteArray());
 
-            getDocumentMap().remove(document.getId(), document);
+            getDocumentMap().replace(document.getId(), document);
 
 
         } catch (IOException e) {
