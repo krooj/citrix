@@ -1,8 +1,11 @@
 package com.krooj.docuserv.servlet;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
@@ -10,11 +13,15 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
-import java.io.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.krooj.docuserv.domain.Document;
+import com.krooj.docuserv.domain.DocuservDomainException;
+import com.krooj.docuserv.service.DocumentService;
+import com.krooj.docuserv.service.DocuservServiceException;
 
 /**
  * This servlet provides a very basic RESTful interface to a document store without
@@ -26,12 +33,10 @@ import java.util.regex.Pattern;
 @MultipartConfig
 public class DocumentServlet extends HttpServlet {
 
+		@Inject
+		private DocumentService documentService;
+
     private final static Logger LOGGER = LogManager.getLogger(DocumentServlet.class.getName());
-
-    private final static String POST = "POST";
-    private final static String PUT = "PUT";
-
-    private ConcurrentMap<String, byte[]> documentMap = new ConcurrentHashMap<>();
 
 
     @Override
@@ -41,12 +46,10 @@ public class DocumentServlet extends HttpServlet {
             String documentId = extractDocumentId(request.getRequestURI());
             validateDocumentId(documentId.trim());
             LOGGER.info("Got GET request for document: " + documentId + " from host: " + request.getRemoteHost());
-            if (!getDocumentMap().containsKey(documentId)) {
-                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            } else {
-                //Specifically do not set the response type. We have no idea what it is..
-                handleFileDownload(documentId, response.getOutputStream());
-            }
+
+						//Specifically do not set the response type. We have no idea what it is..
+						handleFileDownload(documentId, response.getOutputStream());
+
         } catch (DocumentServletException e) {
             LOGGER.error(e);
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
@@ -60,9 +63,11 @@ public class DocumentServlet extends HttpServlet {
             String documentId = extractDocumentId(request.getRequestURI());
             validateDocumentId(documentId.trim());
             LOGGER.info("Got DELETE request for document: " + documentId + " from host: " + request.getRemoteHost());
-            handleDelete(documentId);
+
+						getDocumentService().deleteDocument(documentId);
+
             response.setStatus(HttpServletResponse.SC_NO_CONTENT);
-        } catch (DocumentServletException e) {
+        } catch (DocuservServiceException | DocumentServletException e) {
             LOGGER.error(e);
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         }
@@ -78,9 +83,11 @@ public class DocumentServlet extends HttpServlet {
             String documentId = getFileName(filePart);
             validateDocumentId(documentId.trim());
             LOGGER.info("Got PUT request for document: " + documentId + " from host: " + request.getRemoteHost());
-            handleUpload(PUT, documentId, filePart.getInputStream());
+
+						getDocumentService().updateDocument(documentId, filePart.getInputStream());
+
             response.setStatus(HttpServletResponse.SC_NO_CONTENT);
-        } catch (DocumentServletException e) {
+        } catch (DocuservServiceException | DocumentServletException e) {
             LOGGER.error(e);
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         }
@@ -104,9 +111,11 @@ public class DocumentServlet extends HttpServlet {
             String documentId = getFileName(filePart);
             validateDocumentId(documentId);
             LOGGER.info("Got POST request for document: " + documentId + " from host: " + request.getRemoteHost());
-            handleUpload(POST, documentId, filePart.getInputStream());
+
+						getDocumentService().createDocument(documentId, filePart.getInputStream());
+
             response.setStatus(HttpServletResponse.SC_CREATED);
-        } catch (DocumentServletException e) {
+        } catch (DocuservServiceException | DocumentServletException e) {
             LOGGER.error(e);
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         }
@@ -119,63 +128,24 @@ public class DocumentServlet extends HttpServlet {
         return requestUrl.substring(requestUrl.lastIndexOf("/") + 1, requestUrl.length());
     }
 
-    private void handleUpload(String method, String documentId, InputStream inputStream) throws DocumentServletException {
-
-        //Simple optimization: validate BEFORE reading from a potentially huge stream.
-        if(PUT.equalsIgnoreCase(method) && (!getDocumentMap().containsKey(documentId))){
-            throw new DocumentServletException("DocumentId: " + documentId + " cannot be PUT because it does not exist in the documentMap");
-        }else if(POST.equals(method) && getDocumentMap().containsKey(documentId)){
-            throw new DocumentServletException("DocumentId: " + documentId + " cannot be POST because it already exists in the documentMap");
-        }
-
-        try (
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ) {
-
-            int read = 0;
-            final byte[] bytes = new byte[1024];
-
-            while ((read = inputStream.read(bytes)) != -1) {
-                out.write(bytes, 0, read);
-            }
-
-            getDocumentMap().put(documentId, out.toByteArray());
-
-
-        } catch (IOException e) {
-            throw new DocumentServletException("IOException occurred while handling an upload for documentId: " + documentId, e);
-        }
-    }
 
     //This could be much more slick if we had servlet 3.1 for async handlers.
     private void handleFileDownload(String documentId, OutputStream outputStream) throws DocumentServletException {
 
-        try (
-                ByteArrayInputStream inputStream = new ByteArrayInputStream(getDocumentMap().get(documentId));
-        ) {
-            int read = 0;
-            final byte[] bytes = new byte[1024];
-
-            while ((read = inputStream.read(bytes)) != -1) {
-                outputStream.write(bytes, 0, read);
-            }
-
+        try{
+					Document document = getDocumentService().retrieveDocumentById(documentId);
+					IOUtils.copyLarge(document.getDocumentInputStream(), outputStream);
         } catch (IOException e) {
             throw new DocumentServletException("IOException occurred while handling an upload for documentId: " + documentId, e);
-        }
+        } catch (DocuservDomainException e){
+						throw new DocumentServletException("DocuservDomainException occurred while writing document input stream to response output stream for document: "+documentId, e);
+				} catch (DocuservServiceException e){
+						throw new DocumentServletException("DocuservServiceException occurred while writing document input stream to response output stream for document: "+documentId, e);
+				}
 
 
     }
 
-    private void handleDelete(String documentId) throws DocumentServletException {
-
-        if (!getDocumentMap().containsKey(documentId)) {
-            throw new DocumentServletException("Failed to delete document: " + documentId + " because it was not found in the documentMap");
-        }
-
-        getDocumentMap().remove(documentId);
-
-    }
 
     private String getFileName(Part part) {
         String contentDisp = part.getHeader("content-disposition");
@@ -198,11 +168,11 @@ public class DocumentServlet extends HttpServlet {
         }
     }
 
-    public ConcurrentMap<String, byte[]> getDocumentMap() {
-        return documentMap;
-    }
+	public DocumentService getDocumentService() {
+		return documentService;
+	}
 
-    public void setDocumentMap(ConcurrentMap<String, byte[]> documentMap) {
-        this.documentMap = documentMap;
-    }
+	public void setDocumentService(DocumentService documentService) {
+		this.documentService = documentService;
+	}
 }

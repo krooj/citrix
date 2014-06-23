@@ -1,5 +1,8 @@
 package com.krooj.docuserv.domain;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+
 /**
  * Implementation of the {@link Document} which stores the contents of the document in-memory as
  * a byte array.
@@ -27,4 +30,9 @@ public class InMemoryDocument extends Document {
             throw new DocuservDomainException(message);
         }
     }
+
+	@Override
+	public InputStream getDocumentInputStream() {
+		return new ByteArrayInputStream(getDocumentContents());
+	}
 }

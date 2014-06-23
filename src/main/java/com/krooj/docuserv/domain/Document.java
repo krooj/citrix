@@ -1,5 +1,6 @@
 package com.krooj.docuserv.domain;
 
+import java.io.InputStream;
 import java.util.regex.Pattern;
 
 /**
@@ -76,6 +77,8 @@ public abstract class Document {
 
         return true;
     }
+
+		public abstract InputStream getDocumentInputStream() throws DocuservDomainException;
 
     @Override
     public int hashCode() {

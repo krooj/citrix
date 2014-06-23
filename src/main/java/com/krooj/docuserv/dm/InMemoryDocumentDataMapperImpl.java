@@ -1,12 +1,13 @@
 package com.krooj.docuserv.dm;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.enterprise.inject.Default;
 import javax.inject.Named;
+
+import org.apache.commons.io.IOUtils;
 
 import com.krooj.docuserv.domain.Document;
 import com.krooj.docuserv.domain.DocuservDomainException;
@@ -25,22 +26,9 @@ public class InMemoryDocumentDataMapperImpl extends AbstractDocumentDataMapper{
     public void createDocument(Document document, InputStream documentInputStream) throws DocumentDMException {
         validateNotNull(document, "document may not be null");
         validateNotNull(documentInputStream, "documentInputStream may not be null");
-        try (
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ) {
-
-            int read = 0;
-            final byte[] bytes = new byte[1024];
-
-            while ((read = documentInputStream.read(bytes)) != -1) {
-                out.write(bytes, 0, read);
-            }
-
-            ((InMemoryDocument)document).setDocumentContents(out.toByteArray());
-
+        try {
+						((InMemoryDocument) document).setDocumentContents(IOUtils.toByteArray(documentInputStream));
             getDocumentMap().putIfAbsent(document.getId(), (InMemoryDocument) document);
-
-
         } catch (IOException e) {
             throw new DocumentDMException("IOException occurred while trying to create document: "+document.getId(), e);
         } catch(DocuservDomainException e){
@@ -74,21 +62,9 @@ public class InMemoryDocumentDataMapperImpl extends AbstractDocumentDataMapper{
             throw new DocumentDMException("Document identified by documentId: "+documentId+" does not exist in store");
         }
         InMemoryDocument document =  getDocumentMap().get(documentId);
-        try (
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ) {
-
-            int read = 0;
-            final byte[] bytes = new byte[1024];
-
-            while ((read = documentInputStream.read(bytes)) != -1) {
-                out.write(bytes, 0, read);
-            }
-
-            document.setDocumentContents(out.toByteArray());
-
+        try{
+            document.setDocumentContents(IOUtils.toByteArray(documentInputStream));
             getDocumentMap().replace(document.getId(), document);
-
 
         } catch (IOException e) {
             throw new DocumentDMException("IOException occurred while trying to update document: "+document.getId(), e);

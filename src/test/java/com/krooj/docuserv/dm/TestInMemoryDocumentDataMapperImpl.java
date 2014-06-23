@@ -177,4 +177,150 @@ public class TestInMemoryDocumentDataMapperImpl extends DocuservUnitTest{
 
 		//Verify
 	}
+
+	@Test
+	public void testDeleteDocument_success() throws Exception {
+		//Prepare
+		InMemoryDocument document = TestInMemoryDocument.createDocument();
+		InputStream inputStream = getClass().getResourceAsStream(TEST_DOCUMENT);
+		inMemoryDocumentDataMapper.createDocument(document, inputStream);
+
+		//Expect
+
+		//Replay
+
+		//Execute
+		inMemoryDocumentDataMapper.deleteDocument(document.getId());
+
+		//Assert
+		Assert.assertNull(inMemoryDocumentDataMapper.getDocumentMap().get(document.getId()));
+
+		//Verify
+	}
+
+	@Test
+	public void testDeleteDocument_fail_DocumentNotPresent() throws Exception {
+		//Prepare
+
+		//Expect
+
+		//Replay
+
+		//Execute
+		try{
+			inMemoryDocumentDataMapper.deleteDocument(DOCUMENT_ID);
+		}catch(DocumentDMException e){
+			Assert.assertEquals("Document identified by documentId: "+DOCUMENT_ID+" does not exist in store", e.getMessage());
+			Assert.assertNull(e.getCause());
+		}
+
+		//Assert
+
+		//Verify
+	}
+
+	@Test
+	public void testDeleteDocument_fail_NullDocumentId() throws Exception {
+		//Prepare
+
+		//Expect
+
+		//Replay
+
+		//Execute
+		try{
+			inMemoryDocumentDataMapper.deleteDocument(null);
+		}catch (DocumentDMException e){
+			Assert.assertEquals("documentId may not be empty or null", e.getMessage());
+			Assert.assertNull(e.getCause());
+		}
+
+		//Assert
+
+		//Verify
+	}
+
+	@Test
+	public void testDeleteDocument_fail_EmptyDocumentId() throws Exception {
+		//Prepare
+
+		//Expect
+
+		//Replay
+
+		//Execute
+		try{
+			inMemoryDocumentDataMapper.deleteDocument(" ");
+		}catch (DocumentDMException e){
+			Assert.assertEquals("documentId may not be empty or null", e.getMessage());
+			Assert.assertNull(e.getCause());
+		}
+
+		//Assert
+
+		//Verify
+	}
+
+	@Test
+	public void testRetrieveDocumentById_success_documentIdNotFound() throws Exception {
+		//Prepare
+
+		//Expect
+
+		//Replay
+
+		//Execute
+		try{
+			inMemoryDocumentDataMapper.retrieveDocumentById(DOCUMENT_ID);
+		}catch (DocumentDMException e){
+			Assert.assertEquals("Document identified by documentId: "+DOCUMENT_ID+" does not exist in store", e.getMessage());
+			Assert.assertNull(e.getCause());
+		}
+
+		//Assert
+
+		//Verify
+	}
+
+	@Test
+	public void testRetrieveDocumentById_fail_nullDocumentId() throws Exception {
+		//Prepare
+
+		//Expect
+
+		//Replay
+
+		//Execute
+		try{
+			inMemoryDocumentDataMapper.retrieveDocumentById(null);
+		}catch (DocumentDMException e){
+			Assert.assertEquals("documentId may not be empty or null", e.getMessage());
+			Assert.assertNull(e.getCause());
+		}
+
+		//Assert
+
+		//Verify
+	}
+
+	@Test
+	public void testRetrieveDocumentById_fail_emptyDocumentId() throws Exception {
+		//Prepare
+
+		//Expect
+
+		//Replay
+
+		//Execute
+		try{
+			inMemoryDocumentDataMapper.retrieveDocumentById(" ");
+		}catch (DocumentDMException e){
+			Assert.assertEquals("documentId may not be empty or null", e.getMessage());
+			Assert.assertNull(e.getCause());
+		}
+
+		//Assert
+
+		//Verify
+	}
 }
