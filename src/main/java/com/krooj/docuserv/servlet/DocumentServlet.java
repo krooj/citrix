@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
  * @author Michael Kuredjian
  */
 @WebServlet(name = "document-servlet", urlPatterns = {"/storage/documents/*", "/storage/documents"})
-@MultipartConfig(fileSizeThreshold = 1024 * 1024, maxFileSize = 1024 * 1024 * 5, maxRequestSize = 1024 * 1024 * 5 * 5)
+@MultipartConfig
 public class DocumentServlet extends HttpServlet {
 
     private final static Logger LOGGER = LogManager.getLogger(DocumentServlet.class.getName());
