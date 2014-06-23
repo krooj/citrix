@@ -29,7 +29,7 @@ public class TestDocumentServiceImpl extends DocuservUnitTest{
     public void setUp(){
         mocksControl = EasyMock.createControl();
         documentDataMapper = mocksControl.createMock(DocumentDataMapper.class);
-        documentService = new DocumentServiceImpl(documentDataMapper, DOCUMENT_PATH);
+        documentService = new DocumentServiceImpl(documentDataMapper);
 
     }
 
@@ -113,7 +113,7 @@ public class TestDocumentServiceImpl extends DocuservUnitTest{
         try{
             documentService.createDocument(DOCUMENT_ID, testInputStream);
         }catch(DocuservServiceException e){
-            Assert.assertEquals("DocumentDMException occurred while trying to create Document: "+DOCUMENT_ID+" with path: "+DOCUMENT_PATH, e.getMessage());
+            Assert.assertEquals("DocumentDMException occurred while trying to create Document: "+DOCUMENT_ID, e.getMessage());
             Assert.assertTrue(e.getCause() instanceof DocumentDMException);
         }
 

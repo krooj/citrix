@@ -1,9 +1,12 @@
 package com.krooj.docuserv.servlet;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import com.krooj.docuserv.domain.Document;
+import com.krooj.docuserv.domain.DocuservDomainException;
+import com.krooj.docuserv.service.DocumentService;
+import com.krooj.docuserv.service.DocuservServiceException;
+import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.inject.Inject;
 import javax.servlet.ServletException;
@@ -13,15 +16,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import com.krooj.docuserv.domain.Document;
-import com.krooj.docuserv.domain.DocuservDomainException;
-import com.krooj.docuserv.service.DocumentService;
-import com.krooj.docuserv.service.DocuservServiceException;
+import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * This servlet provides a very basic RESTful interface to a document store without
@@ -33,8 +29,8 @@ import com.krooj.docuserv.service.DocuservServiceException;
 @MultipartConfig
 public class DocumentServlet extends HttpServlet {
 
-		@Inject
-		private DocumentService documentService;
+    @Inject
+    private DocumentService documentService;
 
     private final static Logger LOGGER = LogManager.getLogger(DocumentServlet.class.getName());
 
@@ -44,11 +40,10 @@ public class DocumentServlet extends HttpServlet {
 
         try {
             String documentId = extractDocumentId(request.getRequestURI());
-            validateDocumentId(documentId.trim());
             LOGGER.info("Got GET request for document: " + documentId + " from host: " + request.getRemoteHost());
 
-						//Specifically do not set the response type. We have no idea what it is..
-						handleFileDownload(documentId, response.getOutputStream());
+            //Specifically do not set the response type. We have no idea what it is..
+            handleFileDownload(documentId, response.getOutputStream());
 
         } catch (DocumentServletException e) {
             LOGGER.error(e);
@@ -61,10 +56,9 @@ public class DocumentServlet extends HttpServlet {
 
         try {
             String documentId = extractDocumentId(request.getRequestURI());
-            validateDocumentId(documentId.trim());
             LOGGER.info("Got DELETE request for document: " + documentId + " from host: " + request.getRemoteHost());
 
-						getDocumentService().deleteDocument(documentId);
+            getDocumentService().deleteDocument(documentId);
 
             response.setStatus(HttpServletResponse.SC_NO_CONTENT);
         } catch (DocuservServiceException | DocumentServletException e) {
@@ -81,13 +75,12 @@ public class DocumentServlet extends HttpServlet {
         try {
             Part filePart = request.getPart("document");
             String documentId = getFileName(filePart);
-            validateDocumentId(documentId.trim());
             LOGGER.info("Got PUT request for document: " + documentId + " from host: " + request.getRemoteHost());
 
-						getDocumentService().updateDocument(documentId, filePart.getInputStream());
+            getDocumentService().updateDocument(documentId, filePart.getInputStream());
 
             response.setStatus(HttpServletResponse.SC_NO_CONTENT);
-        } catch (DocuservServiceException | DocumentServletException e) {
+        } catch (DocuservServiceException e) {
             LOGGER.error(e);
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         }
@@ -109,13 +102,12 @@ public class DocumentServlet extends HttpServlet {
             //This method is taken from: http://www.journaldev.com/2122/servlet-3-file-upload-using-multipartconfig-annotation-and-part-interface
             //If I were using servlet 3.1, it would be filePart.getSubmittedFileName...
             String documentId = getFileName(filePart);
-            validateDocumentId(documentId);
             LOGGER.info("Got POST request for document: " + documentId + " from host: " + request.getRemoteHost());
 
-						getDocumentService().createDocument(documentId, filePart.getInputStream());
+            getDocumentService().createDocument(documentId, filePart.getInputStream());
 
             response.setStatus(HttpServletResponse.SC_CREATED);
-        } catch (DocuservServiceException | DocumentServletException e) {
+        } catch (DocuservServiceException e) {
             LOGGER.error(e);
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         }
@@ -132,16 +124,16 @@ public class DocumentServlet extends HttpServlet {
     //This could be much more slick if we had servlet 3.1 for async handlers.
     private void handleFileDownload(String documentId, OutputStream outputStream) throws DocumentServletException {
 
-        try{
-					Document document = getDocumentService().retrieveDocumentById(documentId);
-					IOUtils.copyLarge(document.getDocumentInputStream(), outputStream);
+        try {
+            Document document = getDocumentService().retrieveDocumentById(documentId);
+            IOUtils.copyLarge(document.getDocumentInputStream(), outputStream);
         } catch (IOException e) {
             throw new DocumentServletException("IOException occurred while handling an upload for documentId: " + documentId, e);
-        } catch (DocuservDomainException e){
-						throw new DocumentServletException("DocuservDomainException occurred while writing document input stream to response output stream for document: "+documentId, e);
-				} catch (DocuservServiceException e){
-						throw new DocumentServletException("DocuservServiceException occurred while writing document input stream to response output stream for document: "+documentId, e);
-				}
+        } catch (DocuservDomainException e) {
+            throw new DocumentServletException("DocuservDomainException occurred while writing document input stream to response output stream for document: " + documentId, e);
+        } catch (DocuservServiceException e) {
+            throw new DocumentServletException("DocuservServiceException occurred while writing document input stream to response output stream for document: " + documentId, e);
+        }
 
 
     }
@@ -159,20 +151,11 @@ public class DocumentServlet extends HttpServlet {
         return "";
     }
 
-    private void validateDocumentId(String documentId) throws DocumentServletException{
-        //NB - the spec calls for ALPHANUMERIC with less than or equal to 20 charlen.
-        Pattern pattern = Pattern.compile("^[a-zA-Z0-9]*$");
-        Matcher matcher = pattern.matcher(documentId);
-        if((!matcher.matches()) || (documentId.length()>20)){
-            throw new DocumentServletException("DocumentId is not alphanumeric or is greater tha 20 characters: "+documentId);
-        }
+    public DocumentService getDocumentService() {
+        return documentService;
     }
 
-	public DocumentService getDocumentService() {
-		return documentService;
-	}
-
-	public void setDocumentService(DocumentService documentService) {
-		this.documentService = documentService;
-	}
+    public void setDocumentService(DocumentService documentService) {
+        this.documentService = documentService;
+    }
 }

@@ -3,6 +3,7 @@ package com.krooj.docuserv.service;
 import com.krooj.docuserv.dm.DocumentDMException;
 import com.krooj.docuserv.dm.DocumentDataMapper;
 import com.krooj.docuserv.domain.Document;
+import com.krooj.docuserv.domain.DocuservDomainException;
 
 import javax.enterprise.inject.Default;
 import javax.inject.Inject;
@@ -20,16 +21,12 @@ public class DocumentServiceImpl implements DocumentService{
     @Inject
     private DocumentDataMapper documentDataMapper;
 
-    private String relativePath;
-
     /**
-     * Creates an instance of this DocumentService with the specified mapper and relative path.
+     * Creates an instance of this DocumentService with the specified mapper
      * @param documentDataMapper
-     * @param relativePath
      */
-    public DocumentServiceImpl(DocumentDataMapper documentDataMapper, String relativePath){
+    public DocumentServiceImpl(DocumentDataMapper documentDataMapper){
         setDocumentDataMapper(documentDataMapper);
-        setRelativePath(relativePath);
     }
 
     public DocumentServiceImpl(){
@@ -48,7 +45,7 @@ public class DocumentServiceImpl implements DocumentService{
             }
             getDocumentDataMapper().createDocument(document, documentInputStream);
         }catch (DocumentDMException e){
-            throw new DocuservServiceException("DocumentDMException occurred while trying to create Document: "+documentId+" with path: "+getRelativePath(), e);
+            throw new DocuservServiceException("DocumentDMException occurred while trying to create Document: "+documentId, e);
         }
     }
 
@@ -56,21 +53,41 @@ public class DocumentServiceImpl implements DocumentService{
     public Document retrieveDocumentById(String documentId) throws DocuservServiceException {
         validateNotNullOrEmpty(documentId, "documentId may not be empty or null");
         try{
+            Document.validateId(documentId);
             return getDocumentDataMapper().retrieveDocumentById(documentId);
         } catch (DocumentDMException e) {
-            throw new DocuservServiceException("DocumentDMException occurred while trying to retrieve Document: "+documentId+" with path: "+getRelativePath(), e);
+            throw new DocuservServiceException("DocumentDMException occurred while trying to retrieve Document: "+documentId, e);
+        } catch (DocuservDomainException e) {
+            throw new DocuservServiceException("DocuservDomainException occurred while trying to retrieve Document: "+documentId, e);
         }
     }
 
     @Override
     public void deleteDocument(String documentId) throws DocuservServiceException {
         validateNotNullOrEmpty(documentId, "documentId may not be empty or null");
+        try{
+            Document.validateId(documentId);
+            getDocumentDataMapper().deleteDocument(documentId);
+        }catch (DocumentDMException e) {
+            throw new DocuservServiceException("DocumentDMException occurred while trying to delete Document: "+documentId, e);
+        } catch (DocuservDomainException e) {
+            throw new DocuservServiceException("DocuservDomainException occurred while trying to delete Document: "+documentId, e);
+        }
+
     }
 
     @Override
     public void updateDocument(String documentId, InputStream documentInputStream) throws DocuservServiceException {
         validateNotNullOrEmpty(documentId, "documentId may not be empty or null");
         validateNotNull(documentInputStream, "documentInputStream may not be null");
+        try{
+            Document.validateId(documentId);
+            getDocumentDataMapper().updateDocument(documentId, documentInputStream);
+        }catch (DocumentDMException e) {
+            throw new DocuservServiceException("DocumentDMException occurred while trying to update Document: "+documentId, e);
+        } catch (DocuservDomainException e) {
+            throw new DocuservServiceException("DocuservDomainException occurred while trying to update Document: "+documentId, e);
+        }
     }
 
     protected void validateNotNullOrEmpty(String target, String message) throws DocuservServiceException {
@@ -94,11 +111,5 @@ public class DocumentServiceImpl implements DocumentService{
         this.documentDataMapper = documentDataMapper;
     }
 
-    public String getRelativePath() {
-        return relativePath;
-    }
 
-    public void setRelativePath(String relativePath) {
-        this.relativePath = relativePath;
-    }
 }

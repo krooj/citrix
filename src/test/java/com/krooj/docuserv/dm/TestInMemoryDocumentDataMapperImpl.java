@@ -1,14 +1,13 @@
 package com.krooj.docuserv.dm;
 
-import java.io.InputStream;
-
+import com.krooj.docuserv.DocuservUnitTest;
+import com.krooj.docuserv.domain.InMemoryDocument;
+import com.krooj.docuserv.domain.TestInMemoryDocument;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.krooj.docuserv.DocuservUnitTest;
-import com.krooj.docuserv.domain.InMemoryDocument;
-import com.krooj.docuserv.domain.TestInMemoryDocument;
+import java.io.InputStream;
 
 /**
  * Test cases for the {@link com.krooj.docuserv.dm.InMemoryDocumentDataMapperImpl}
@@ -146,7 +145,7 @@ public class TestInMemoryDocumentDataMapperImpl extends DocuservUnitTest{
 		try{
 			inMemoryDocumentDataMapper.updateDocument(null, inputStream);
 		}catch (DocumentDMException e){
-			Assert.assertEquals("documentId may not be null", e.getMessage());
+			Assert.assertEquals("documentId may not be empty or null", e.getMessage());
 			Assert.assertNull(e.getCause());
 		}
 

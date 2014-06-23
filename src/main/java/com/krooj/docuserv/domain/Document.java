@@ -57,7 +57,7 @@ public abstract class Document {
      * @param id
      * @throws DocuservDomainException
      */
-    protected void validateId(String id) throws DocuservDomainException{
+    public static void validateId(String id) throws DocuservDomainException{
         //TODO: Inject the pattern.
         Pattern pattern = Pattern.compile("^[a-zA-Z0-9]+\\.[a-zA-Z0-9]+$");
         //TODO: Inject the length requirement.
