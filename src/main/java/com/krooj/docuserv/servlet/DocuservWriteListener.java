@@ -37,6 +37,8 @@ public class DocuservWriteListener implements WriteListener {
         try{
             Document document = getDocumentService().retrieveDocumentById(getDocumentId());
             IOUtils.copyLarge(document.getDocumentInputStream(), getResponse().getOutputStream());
+            getResponse().getOutputStream().flush();
+            getResponse().getOutputStream().close();
         }catch (DocuservDomainException | IOException | DocuservServiceException e){
             LOGGER.error(e);
             getResponse().setStatus(HttpServletResponse.SC_NOT_FOUND);
