@@ -9,7 +9,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.inject.Inject;
+import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -25,7 +27,7 @@ import java.io.OutputStream;
  *
  * @author Michael Kuredjian
  */
-@WebServlet(name = "document-servlet", urlPatterns = {"/storage/documents/*", "/storage/documents"})
+@WebServlet(name = "document-servlet", urlPatterns = {"/storage/documents/*", "/storage/documents"}, asyncSupported = true)
 @MultipartConfig
 public class DocumentServlet extends HttpServlet {
 
@@ -42,8 +44,12 @@ public class DocumentServlet extends HttpServlet {
             String documentId = extractDocumentId(request.getRequestURI());
             LOGGER.info("Got GET request for document: " + documentId + " from host: " + request.getRemoteHost());
 
-            //Specifically do not set the response type. We have no idea what it is..
-            handleFileDownload(documentId, response.getOutputStream());
+            AsyncContext context = request.startAsync();
+            ServletOutputStream servletOutputStream = response.getOutputStream();
+            servletOutputStream.setWriteListener(new DocuservWriteListener(response, context, documentId, getDocumentService()));
+
+//            //Specifically do not set the response type. We have no idea what it is..
+//            handleFileDownload(documentId, response.getOutputStream());
 
         } catch (DocumentServletException e) {
             LOGGER.error(e);
