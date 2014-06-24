@@ -15,39 +15,12 @@ public abstract class Document {
     /**
      * Don't allow creation of empty domain object
      */
-    protected Document(){
+    protected Document() {
 
     }
 
-    public Document(String id) throws DocuservDomainException{
+    public Document(String id) throws DocuservDomainException {
         setId(id);
-    }
-
-
-
-    public String getId() {
-        return id;
-    }
-
-    protected void setId(String id) throws DocuservDomainException{
-        validateNotNullOrEmpty(id, "id may not be empty or null");
-        validateId(id);
-        this.id = id;
-    }
-
-
-    /**
-     * Validates that the passed argument is neither null nor empty (trimmed).
-     * This method should be replaced with JSR-303.
-     *
-     * @param target
-     * @param message
-     * @throws DocuservDomainException
-     */
-    protected void validateNotNullOrEmpty(String target, String message) throws DocuservDomainException{
-        if(target==null || target.trim().length()==0){
-            throw new DocuservDomainException(message);
-        }
     }
 
     /**
@@ -57,12 +30,36 @@ public abstract class Document {
      * @param id
      * @throws DocuservDomainException
      */
-    public static void validateId(String id) throws DocuservDomainException{
+    public static void validateId(String id) throws DocuservDomainException {
         //TODO: Inject the pattern.
         Pattern pattern = Pattern.compile("^[a-zA-Z0-9]+\\.[a-zA-Z0-9]+$");
         //TODO: Inject the length requirement.
-        if(!(pattern.matcher(id).matches() && id.trim().length()<=20)){
+        if (!(pattern.matcher(id).matches() && id.trim().length() <= 20)) {
             throw new DocuservDomainException("Document id must be alpha-numeric with a '.' extension and no more than 20 characters");
+        }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    protected void setId(String id) throws DocuservDomainException {
+        validateNotNullOrEmpty(id, "id may not be empty or null");
+        validateId(id);
+        this.id = id;
+    }
+
+    /**
+     * Validates that the passed argument is neither null nor empty (trimmed).
+     * This method should be replaced with JSR-303.
+     *
+     * @param target
+     * @param message
+     * @throws DocuservDomainException
+     */
+    protected void validateNotNullOrEmpty(String target, String message) throws DocuservDomainException {
+        if (target == null || target.trim().length() == 0) {
+            throw new DocuservDomainException(message);
         }
     }
 
@@ -78,7 +75,7 @@ public abstract class Document {
         return true;
     }
 
-		public abstract InputStream getDocumentInputStream() throws DocuservDomainException;
+    public abstract InputStream getDocumentInputStream() throws DocuservDomainException;
 
     @Override
     public int hashCode() {

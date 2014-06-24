@@ -3,9 +3,6 @@ package com.krooj.docuserv.service;
 import com.krooj.docuserv.DocuservUnitTest;
 import com.krooj.docuserv.dm.DocumentDMException;
 import com.krooj.docuserv.dm.DocumentDataMapper;
-import com.krooj.docuserv.domain.Document;
-import com.krooj.docuserv.domain.PhysicalDocument;
-import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.IMocksControl;
 import org.junit.Assert;
@@ -36,14 +33,10 @@ public class TestDocumentServiceImpl extends DocuservUnitTest{
     @Test
     public void testCreateDocument_success() throws Exception{
         //Prepare
-        PhysicalDocument document = new PhysicalDocument(DOCUMENT_ID, DOCUMENT_PATH);
-        Capture<Document> documentCapture = new Capture<>();
         InputStream testInputStream = loadTestDocument();
 
         //Expect
-        EasyMock.expect(documentDataMapper.newDocumentForMapper(DOCUMENT_ID)).andReturn(document);
-        EasyMock.expect(documentDataMapper.validateDocumentExistence(EasyMock.capture(documentCapture))).andReturn(Boolean.FALSE);
-        documentDataMapper.createDocument(EasyMock.capture(documentCapture), EasyMock.eq(testInputStream));
+        documentDataMapper.createDocument(DOCUMENT_ID, testInputStream);
 
 
         //Replay
@@ -53,9 +46,6 @@ public class TestDocumentServiceImpl extends DocuservUnitTest{
         documentService.createDocument(DOCUMENT_ID, testInputStream);
 
         //Assert
-        Document createdDocument = documentCapture.getValue();
-        Assert.assertNotNull(createdDocument);
-        Assert.assertEquals(DOCUMENT_ID, createdDocument.getId());
 
         //Verify
         mocksControl.verify();
@@ -64,14 +54,12 @@ public class TestDocumentServiceImpl extends DocuservUnitTest{
     @Test
     public void testCreateDocument_fail_documentIdAlreadyExists() throws Exception {
         //Prepare
-        PhysicalDocument document = new PhysicalDocument(DOCUMENT_ID, DOCUMENT_PATH);
-        Capture<Document> documentCapture = new Capture<>();
         InputStream testInputStream = loadTestDocument();
+        DocumentDMException dmException = new DocumentDMException("There is already a value associated with the given documentId: "+DOCUMENT_ID);
 
         //Expect
-        EasyMock.expect(documentDataMapper.newDocumentForMapper(DOCUMENT_ID)).andReturn(document);
-        EasyMock.expect(documentDataMapper.validateDocumentExistence(EasyMock.capture(documentCapture))).andReturn(Boolean.TRUE);
-
+        documentDataMapper.createDocument(DOCUMENT_ID, testInputStream);
+        EasyMock.expectLastCall().andThrow(dmException);
 
         //Replay
         mocksControl.replay();
@@ -80,51 +68,18 @@ public class TestDocumentServiceImpl extends DocuservUnitTest{
         try{
             documentService.createDocument(DOCUMENT_ID, testInputStream);
         }catch(DocuservServiceException e){
-            Assert.assertEquals("Document: "+DOCUMENT_ID+" already exists.", e.getMessage());
-            Assert.assertNull(e.getCause());
-        }
-
-        //Assert
-        Document createdDocument = documentCapture.getValue();
-        Assert.assertNotNull(createdDocument);
-        Assert.assertEquals(DOCUMENT_ID, createdDocument.getId());
-
-        //Verify
-        mocksControl.verify();
-    }
-
-    @Test
-    public void testCreateDocument_fail_DocumentDMException() throws Exception {
-        //Prepare
-        PhysicalDocument document = new PhysicalDocument(DOCUMENT_ID, DOCUMENT_PATH);
-        Capture<Document> documentCapture = new Capture<>();
-        InputStream testInputStream = loadTestDocument();
-        DocumentDMException documentDMException = new DocumentDMException("Test");
-
-        //Expect
-        EasyMock.expect(documentDataMapper.newDocumentForMapper(DOCUMENT_ID)).andReturn(document);
-        EasyMock.expect(documentDataMapper.validateDocumentExistence(EasyMock.capture(documentCapture))).andThrow(documentDMException);
-
-
-        //Replay
-        mocksControl.replay();
-
-        //Execute
-        try{
-            documentService.createDocument(DOCUMENT_ID, testInputStream);
-        }catch(DocuservServiceException e){
+            //Assert
             Assert.assertEquals("DocumentDMException occurred while trying to create Document: "+DOCUMENT_ID, e.getMessage());
+            Assert.assertNotNull(e.getCause());
             Assert.assertTrue(e.getCause() instanceof DocumentDMException);
+            Assert.assertEquals("There is already a value associated with the given documentId: "+DOCUMENT_ID,e.getCause().getMessage());
         }
 
-        //Assert
-        Document createdDocument = documentCapture.getValue();
-        Assert.assertNotNull(createdDocument);
-        Assert.assertEquals(DOCUMENT_ID, createdDocument.getId());
 
         //Verify
         mocksControl.verify();
     }
+
 
     @Test
     public void testCreateDocument_fail_nullDocumentId() throws Exception{

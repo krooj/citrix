@@ -21,53 +21,56 @@ public class InMemoryDocumentDataMapperImpl extends AbstractDocumentDataMapper {
     private ConcurrentHashMap<String, InMemoryDocument> documentMap = new ConcurrentHashMap<>();
 
     @Override
-    public void createDocument(Document document, InputStream documentInputStream) throws DocumentDMException {
-        validateNotNull(document, "document may not be null");
+    public void createDocument(String documentId, InputStream documentInputStream) throws DocumentDMException {
+        validateNotNull(documentId, "document may not be empty or null");
         validateNotNull(documentInputStream, "documentInputStream may not be null");
         try {
-            ((InMemoryDocument) document).setDocumentContents(IOUtils.toByteArray(documentInputStream));
-            getDocumentMap().putIfAbsent(document.getId(), (InMemoryDocument) document);
+            InMemoryDocument document = new InMemoryDocument(documentId, IOUtils.toByteArray(documentInputStream));
+            InMemoryDocument previousValue = getDocumentMap().putIfAbsent(document.getId(), document);
+            if(previousValue!=null){
+                throw new DocumentDMException("There is already a value associated with the given documentId: "+documentId);
+            }
         } catch (IOException e) {
-            throw new DocumentDMException("IOException occurred while trying to create document: " + document.getId(), e);
+            throw new DocumentDMException("IOException occurred while trying to create document: " + documentId, e);
         } catch (DocuservDomainException e) {
-            throw new DocumentDMException("DocuservDomainException occurred while trying to create document: " + document.getId(), e);
+            throw new DocumentDMException("DocuservDomainException occurred while trying to create document: " + documentId, e);
         }
     }
 
     @Override
     public Document retrieveDocumentById(String documentId) throws DocumentDMException {
         validateNotNullOrEmpty(documentId, "documentId may not be empty or null");
-        if (!getDocumentMap().containsKey(documentId)) {
+        InMemoryDocument retrievedDocument = getDocumentMap().get(documentId);
+        if (retrievedDocument==null) {
             throw new DocumentDMException("Document identified by documentId: " + documentId + " does not exist in store");
         }
-        return getDocumentMap().get(documentId);
+        return retrievedDocument;
     }
 
     @Override
     public void deleteDocument(String documentId) throws DocumentDMException {
         validateNotNullOrEmpty(documentId, "documentId may not be empty or null");
-        if (!getDocumentMap().containsKey(documentId)) {
+        InMemoryDocument removedDocument = getDocumentMap().remove(documentId);
+        if (removedDocument==null) {
             throw new DocumentDMException("Document identified by documentId: " + documentId + " does not exist in store");
         }
-        getDocumentMap().remove(documentId);
     }
 
     @Override
     public void updateDocument(String documentId, InputStream documentInputStream) throws DocumentDMException {
         validateNotNull(documentId, "documentId may not be empty or null");
         validateNotNull(documentInputStream, "documentInputStream may not be null");
-        if (!getDocumentMap().containsKey(documentId)) {
-            throw new DocumentDMException("Document identified by documentId: " + documentId + " does not exist in store");
-        }
-        InMemoryDocument document = getDocumentMap().get(documentId);
         try {
-            document.setDocumentContents(IOUtils.toByteArray(documentInputStream));
-            getDocumentMap().replace(document.getId(), document);
+            InMemoryDocument document = new InMemoryDocument(documentId, IOUtils.toByteArray(documentInputStream));
+            InMemoryDocument replacedDocument = getDocumentMap().replace(documentId, document);
+            if(replacedDocument==null){
+                throw new DocumentDMException("Document identified by documentId: " + documentId + " does not exist in store");
+            }
 
         } catch (IOException e) {
-            throw new DocumentDMException("IOException occurred while trying to update document: " + document.getId(), e);
+            throw new DocumentDMException("IOException occurred while trying to update document: " + documentId, e);
         } catch (DocuservDomainException e) {
-            throw new DocumentDMException("DocuservDomainException occurred while trying to update document: " + document.getId(), e);
+            throw new DocumentDMException("DocuservDomainException occurred while trying to update document: " + documentId, e);
         }
     }
 
@@ -82,14 +85,5 @@ public class InMemoryDocumentDataMapperImpl extends AbstractDocumentDataMapper {
 
     private void setDocumentMap(ConcurrentHashMap<String, InMemoryDocument> documentMap) {
         this.documentMap = documentMap;
-    }
-
-    @Override
-    public Document newDocumentForMapper(String documentId) throws DocumentDMException {
-        try {
-            return new InMemoryDocument(documentId, new byte[]{});
-        } catch (DocuservDomainException e) {
-            throw new DocumentDMException("DocuservDomainException occurred while trying to create InMemoryDocument: " + documentId, e);
-        }
     }
 }

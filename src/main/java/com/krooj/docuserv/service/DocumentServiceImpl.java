@@ -3,7 +3,6 @@ package com.krooj.docuserv.service;
 import com.krooj.docuserv.dm.DocumentDMException;
 import com.krooj.docuserv.dm.DocumentDataMapper;
 import com.krooj.docuserv.domain.Document;
-import com.krooj.docuserv.domain.DocuservDomainException;
 
 import javax.enterprise.inject.Default;
 import javax.inject.Inject;
@@ -38,12 +37,7 @@ public class DocumentServiceImpl implements DocumentService{
         validateNotNullOrEmpty(documentId, "documentId may not be empty or null");
         validateNotNull(documentInputStream, "documentInputStream may not be null");
         try{
-            Document document = getDocumentDataMapper().newDocumentForMapper(documentId);
-            //Ensure the document doesn't already exist.
-            if(getDocumentDataMapper().validateDocumentExistence(document)){
-                throw new DocuservServiceException("Document: "+documentId+" already exists.");
-            }
-            getDocumentDataMapper().createDocument(document, documentInputStream);
+            getDocumentDataMapper().createDocument(documentId, documentInputStream);
         }catch (DocumentDMException e){
             throw new DocuservServiceException("DocumentDMException occurred while trying to create Document: "+documentId, e);
         }
@@ -53,12 +47,9 @@ public class DocumentServiceImpl implements DocumentService{
     public Document retrieveDocumentById(String documentId) throws DocuservServiceException {
         validateNotNullOrEmpty(documentId, "documentId may not be empty or null");
         try{
-            Document.validateId(documentId);
             return getDocumentDataMapper().retrieveDocumentById(documentId);
         } catch (DocumentDMException e) {
             throw new DocuservServiceException("DocumentDMException occurred while trying to retrieve Document: "+documentId, e);
-        } catch (DocuservDomainException e) {
-            throw new DocuservServiceException("DocuservDomainException occurred while trying to retrieve Document: "+documentId, e);
         }
     }
 
@@ -66,12 +57,9 @@ public class DocumentServiceImpl implements DocumentService{
     public void deleteDocument(String documentId) throws DocuservServiceException {
         validateNotNullOrEmpty(documentId, "documentId may not be empty or null");
         try{
-            Document.validateId(documentId);
             getDocumentDataMapper().deleteDocument(documentId);
         }catch (DocumentDMException e) {
             throw new DocuservServiceException("DocumentDMException occurred while trying to delete Document: "+documentId, e);
-        } catch (DocuservDomainException e) {
-            throw new DocuservServiceException("DocuservDomainException occurred while trying to delete Document: "+documentId, e);
         }
 
     }
@@ -81,12 +69,9 @@ public class DocumentServiceImpl implements DocumentService{
         validateNotNullOrEmpty(documentId, "documentId may not be empty or null");
         validateNotNull(documentInputStream, "documentInputStream may not be null");
         try{
-            Document.validateId(documentId);
             getDocumentDataMapper().updateDocument(documentId, documentInputStream);
         }catch (DocumentDMException e) {
             throw new DocuservServiceException("DocumentDMException occurred while trying to update Document: "+documentId, e);
-        } catch (DocuservDomainException e) {
-            throw new DocuservServiceException("DocuservDomainException occurred while trying to update Document: "+documentId, e);
         }
     }
 

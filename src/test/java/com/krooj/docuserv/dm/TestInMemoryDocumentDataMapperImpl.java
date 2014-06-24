@@ -33,7 +33,7 @@ public class TestInMemoryDocumentDataMapperImpl extends DocuservUnitTest{
 		//Replay
 
 		//Execute
-		inMemoryDocumentDataMapper.createDocument(document, inputStream);
+		inMemoryDocumentDataMapper.createDocument(DOCUMENT_ID, inputStream);
 
 		//Assert
 		Assert.assertNotNull(inMemoryDocumentDataMapper.retrieveDocumentById(document.getId()));
@@ -55,9 +55,9 @@ public class TestInMemoryDocumentDataMapperImpl extends DocuservUnitTest{
 
 		//Execute
 		try{
-			inMemoryDocumentDataMapper.createDocument(document, inputStream);
+			inMemoryDocumentDataMapper.createDocument(DOCUMENT_ID, inputStream);
 		}catch (DocumentDMException e){
-			Assert.assertEquals("document may not be null", e.getMessage());
+			Assert.assertEquals("documentId may not be empty or null", e.getMessage());
 			Assert.assertNull(e.getCause());
 		}
 
@@ -78,7 +78,7 @@ public class TestInMemoryDocumentDataMapperImpl extends DocuservUnitTest{
 
 		//Execute
 		try{
-			inMemoryDocumentDataMapper.createDocument(document, inputStream);
+			inMemoryDocumentDataMapper.createDocument(DOCUMENT_ID, inputStream);
 		}catch (DocumentDMException e){
 			Assert.assertEquals("documentInputStream may not be null", e.getMessage());
 			Assert.assertNull(e.getCause());
@@ -94,7 +94,7 @@ public class TestInMemoryDocumentDataMapperImpl extends DocuservUnitTest{
 		//Prepare
 		InMemoryDocument document = TestInMemoryDocument.createDocument();
 		InputStream inputStream = getClass().getResourceAsStream(TEST_DOCUMENT);
-		inMemoryDocumentDataMapper.createDocument(document, inputStream);
+		inMemoryDocumentDataMapper.createDocument(DOCUMENT_ID, inputStream);
 
 		//Expect
 
@@ -182,7 +182,7 @@ public class TestInMemoryDocumentDataMapperImpl extends DocuservUnitTest{
 		//Prepare
 		InMemoryDocument document = TestInMemoryDocument.createDocument();
 		InputStream inputStream = getClass().getResourceAsStream(TEST_DOCUMENT);
-		inMemoryDocumentDataMapper.createDocument(document, inputStream);
+		inMemoryDocumentDataMapper.createDocument(DOCUMENT_ID, inputStream);
 
 		//Expect
 

@@ -12,11 +12,11 @@ public interface DocumentDataMapper {
     /**
      * This will take an {@link java.io.InputStream} which is opened from the caller and a Document instance.
      *
-     * @param document
+     * @param documentId
      * @param documentInputStream
      * @throws com.krooj.docuserv.dm.DocumentDMException
      */
-    void createDocument(Document document, InputStream documentInputStream) throws DocumentDMException;
+    void createDocument(String documentId, InputStream documentInputStream) throws DocumentDMException;
 
     /**
      * Returns a {@link com.krooj.docuserv.domain.Document} via it's id. A {@link com.krooj.docuserv.dm.DocumentDMException}
@@ -54,12 +54,5 @@ public interface DocumentDataMapper {
      */
     boolean validateDocumentExistence(Document document) throws DocumentDMException;
 
-    /**
-     * Returns a {@link com.krooj.docuserv.domain.Document} which is acceptable for the target mapper.
-     * @param documentId
-     * @return
-     * @throws DocumentDMException
-     */
-    public Document newDocumentForMapper(String documentId) throws DocumentDMException;
 
 }
