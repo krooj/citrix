@@ -1,8 +1,8 @@
 package com.krooj.docuserv.service;
 
-import com.krooj.docuserv.domain.Document;
-
 import java.io.InputStream;
+
+import com.krooj.docuserv.domain.Document;
 
 /**
  * This interface defines the actions that can be performed against a
