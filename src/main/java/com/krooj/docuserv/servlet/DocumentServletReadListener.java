@@ -1,14 +1,17 @@
 package com.krooj.docuserv.servlet;
 
-import java.io.IOException;
+import com.krooj.docuserv.service.DocumentService;
+import com.krooj.docuserv.service.DocuservServiceException;
+import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletResponse;
-
-import com.krooj.docuserv.service.DocumentService;
-import com.krooj.docuserv.service.DocuservServiceException;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 
 /**
  * This {@link javax.servlet.ReadListener} is intended to support asynchronous
@@ -19,11 +22,14 @@ import com.krooj.docuserv.service.DocuservServiceException;
  */
 public class DocumentServletReadListener implements ReadListener{
 
+    private final static Logger LOGGER = LogManager.getLogger(DocumentServletReadListener.class.getName());
+
 	private AsyncContext asyncContext;
 	private ServletInputStream inputStream;
 	private HttpServletResponse response;
 	private DocumentService documentService;
 	private String documentId;
+    private ByteArrayOutputStream byteArrayOutputStream;
 
 	public DocumentServletReadListener(AsyncContext asyncContext, ServletInputStream inputStream, HttpServletResponse response, DocumentService documentService, String documentId) {
 		setAsyncContext(asyncContext);
@@ -31,6 +37,8 @@ public class DocumentServletReadListener implements ReadListener{
 		setResponse(response);
 		setDocumentService(documentService);
 		setDocumentId(documentId);
+        setByteArrayOutputStream(new ByteArrayOutputStream());
+
 	}
 
 	/**
@@ -39,20 +47,29 @@ public class DocumentServletReadListener implements ReadListener{
 	 */
 	@Override
 	public void onDataAvailable() throws IOException {
-		try{
-			getDocumentService().createDocument(getDocumentId(),getInputStream());
-		}catch (DocuservServiceException e){
 
-		}
+        while (getInputStream().isReady()) {
+            IOUtils.copy(getInputStream(),getByteArrayOutputStream());
+        }
 	}
 
 	@Override
 	public void onAllDataRead() throws IOException {
+        try {
+            getDocumentService().createDocument(getDocumentId(),getByteArrayOutputStream().toByteArray());
+            getResponse().setStatus(HttpServletResponse.SC_CREATED);
+        } catch (DocuservServiceException e) {
+            LOGGER.error(e);
+            getResponse().setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        }finally {
+            getAsyncContext().complete();
+        }
 
 	}
 
 	@Override
 	public void onError(Throwable throwable) {
+        LOGGER.error(throwable);
 		getAsyncContext().complete();
 	}
 
@@ -95,4 +112,12 @@ public class DocumentServletReadListener implements ReadListener{
 	protected void setDocumentId(String documentId) {
 		this.documentId = documentId;
 	}
+
+    protected ByteArrayOutputStream getByteArrayOutputStream() {
+        return byteArrayOutputStream;
+    }
+
+    public void setByteArrayOutputStream(ByteArrayOutputStream byteArrayOutputStream) {
+        this.byteArrayOutputStream = byteArrayOutputStream;
+    }
 }

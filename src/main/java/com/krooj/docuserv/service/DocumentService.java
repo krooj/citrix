@@ -1,8 +1,8 @@
 package com.krooj.docuserv.service;
 
-import java.io.InputStream;
-
 import com.krooj.docuserv.domain.Document;
+
+import java.io.InputStream;
 
 /**
  * This interface defines the actions that can be performed against a
@@ -21,6 +21,8 @@ public interface DocumentService {
      * @throws DocuservServiceException
      */
     void createDocument(String documentId, InputStream documentInputStream) throws DocuservServiceException;
+
+    void createDocument(String documentId, byte[] documentContent) throws DocuservServiceException;
 
     /**
      * Returns a {@link com.krooj.docuserv.domain.Document} via it's id. A {@link com.krooj.docuserv.service.DocuservServiceException}

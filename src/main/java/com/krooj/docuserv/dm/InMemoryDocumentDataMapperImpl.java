@@ -38,6 +38,20 @@ public class InMemoryDocumentDataMapperImpl extends AbstractDocumentDataMapper {
     }
 
     @Override
+    public void createDocument(String documentId, byte[] documentData) throws DocumentDMException {
+        validateNotNull(documentId, "document may not be empty or null");
+        try {
+            InMemoryDocument document = new InMemoryDocument(documentId, documentData);
+            InMemoryDocument previousValue = getDocumentMap().putIfAbsent(document.getId(), document);
+            if(previousValue!=null){
+                throw new DocumentDMException("There is already a value associated with the given documentId: "+documentId);
+            }
+        } catch (DocuservDomainException e) {
+            throw new DocumentDMException("DocuservDomainException occurred while trying to create document: " + documentId, e);
+        }
+    }
+
+    @Override
     public Document retrieveDocumentById(String documentId) throws DocumentDMException {
         validateNotNullOrEmpty(documentId, "documentId may not be empty or null");
         InMemoryDocument retrievedDocument = getDocumentMap().get(documentId);

@@ -1,29 +1,25 @@
 package com.krooj.docuserv.servlet;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import com.krooj.docuserv.domain.Document;
+import com.krooj.docuserv.domain.DocuservDomainException;
+import com.krooj.docuserv.service.DocumentService;
+import com.krooj.docuserv.service.DocuservServiceException;
+import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.inject.Inject;
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import com.krooj.docuserv.domain.Document;
-import com.krooj.docuserv.domain.DocuservDomainException;
-import com.krooj.docuserv.service.DocumentService;
-import com.krooj.docuserv.service.DocuservServiceException;
+import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * This servlet provides a very basic RESTful interface to a document store without
@@ -31,153 +27,149 @@ import com.krooj.docuserv.service.DocuservServiceException;
  *
  * @author Michael Kuredjian
  */
-@WebServlet(name = "document-servlet", urlPatterns = { "/storage/documents/*", "/storage/documents" }, asyncSupported = true)
-@MultipartConfig
+@WebServlet(name = "document-servlet", urlPatterns = {"/storage/documents/*", "/storage/documents"}, asyncSupported = true)
 public class DocumentServlet extends HttpServlet {
 
-	@Inject
-	private DocumentService documentService;
+    private final static Logger LOGGER = LogManager.getLogger(DocumentServlet.class.getName());
+    @Inject
+    private DocumentService documentService;
 
-	private final static Logger LOGGER = LogManager.getLogger(DocumentServlet.class.getName());
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
 
+        try {
+            String documentId = extractDocumentId(request.getRequestURI());
+            LOGGER.info("Got GET request for document: " + documentId + " from host: " + request.getRemoteHost());
 
-	@Override
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+            //Specifically do not set the response type. We have no idea what it is..
+            handleFileDownload(documentId, response.getOutputStream());
 
-		try {
-			String documentId = extractDocumentId(request.getRequestURI());
-			LOGGER.info("Got GET request for document: " + documentId + " from host: " + request.getRemoteHost());
+        } catch (DocumentServletException e) {
+            LOGGER.error(e);
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        }
+    }
 
-			//Specifically do not set the response type. We have no idea what it is..
-			handleFileDownload(documentId, response.getOutputStream());
+    @Override
+    protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
 
-		} catch (DocumentServletException e) {
-			LOGGER.error(e);
-			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-		}
-	}
+        try {
+            String documentId = extractDocumentId(request.getRequestURI());
+            LOGGER.info("Got DELETE request for document: " + documentId + " from host: " + request.getRemoteHost());
 
-	@Override
-	protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+            getDocumentService().deleteDocument(documentId);
 
-		try {
-			String documentId = extractDocumentId(request.getRequestURI());
-			LOGGER.info("Got DELETE request for document: " + documentId + " from host: " + request.getRemoteHost());
+            response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        } catch (DocuservServiceException | DocumentServletException e) {
+            LOGGER.error(e);
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        }
 
-			getDocumentService().deleteDocument(documentId);
+    }
 
-			response.setStatus(HttpServletResponse.SC_NO_CONTENT);
-		} catch (DocuservServiceException | DocumentServletException e) {
-			LOGGER.error(e);
-			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-		}
+    @Override
+    protected void doPut(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
 
-	}
+        try {
+            Part filePart = request.getPart("document");
+            String documentId = getFileName(filePart);
+            LOGGER.info("Got PUT request for document: " + documentId + " from host: " + request.getRemoteHost());
 
-	@Override
-	protected void doPut(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+            getDocumentService().updateDocument(documentId, filePart.getInputStream());
 
-		try {
-			Part filePart = request.getPart("document");
-			String documentId = getFileName(filePart);
-			LOGGER.info("Got PUT request for document: " + documentId + " from host: " + request.getRemoteHost());
+            response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        } catch (DocuservServiceException e) {
+            LOGGER.error(e);
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        }
+    }
 
-			getDocumentService().updateDocument(documentId, filePart.getInputStream());
+    /**
+     * This method will support file upload functionality.
+     *
+     * @param request
+     * @param response
+     * @throws ServletException
+     * @throws IOException
+     */
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        // Create path components to save the file
 
-			response.setStatus(HttpServletResponse.SC_NO_CONTENT);
-		} catch (DocuservServiceException e) {
-			LOGGER.error(e);
-			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-		}
-	}
+            final String documentId = request.getHeader("x-documentid");
+            LOGGER.info("Got POST request for document: " + documentId + " from host: " + request.getRemoteHost());
 
-	/**
-	 * This method will support file upload functionality.
-	 *
-	 * @param request
-	 * @param response
-	 * @throws ServletException
-	 * @throws IOException
-	 */
-	@Override
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		// Create path components to save the file
-		try {
-			Part filePart = request.getPart("document");
-			String documentId = filePart.getSubmittedFileName();
-			LOGGER.info("Got POST request for document: " + documentId + " from host: " + request.getRemoteHost());
+            AsyncContext asyncContext = request.startAsync();
+            asyncContext.addListener(new AsyncListener() {
+                public void onComplete(AsyncEvent event) throws IOException {
 
-			getDocumentService().createDocument(documentId, filePart.getInputStream());
-			AsyncContext asyncContext = request.startAsync();
-			asyncContext.addListener(new AsyncListener() {
-				public void onComplete(AsyncEvent event) throws IOException {
-					((HttpServletResponse)event.getSuppliedResponse()).setStatus(HttpServletResponse.SC_CREATED);
-				}
+                }
 
-				public void onError(AsyncEvent event) {
-					System.out.println(event.getThrowable());
-				}
+                public void onError(AsyncEvent event) {
+                    DocumentServlet.LOGGER.error("An exception occurred while processing POST of documentId: "+documentId, event.getThrowable());
+                    ((HttpServletResponse)event.getSuppliedResponse()).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                }
 
-				public void onStartAsync(AsyncEvent event) {
-				}
+                public void onStartAsync(AsyncEvent event) {
+                    DocumentServlet.LOGGER.info("Started async listener for Document servlet POST");
+                }
 
-				public void onTimeout(AsyncEvent event) {
-					System.out.println("my asyncListener.onTimeout");
-				}
-			});
-			DocumentServletReadListener documentServletReadListener = new DocumentServletReadListener(asyncContext, request.getInputStream(), response, documentService, documentId);
-			request.getInputStream().setReadListener(documentServletReadListener);
+                public void onTimeout(AsyncEvent event) {
+                    DocumentServlet.LOGGER.error("Timeout occurred in Document servlet listener",event.getThrowable());
+                }
+            });
+            DocumentServletReadListener documentServletReadListener = new DocumentServletReadListener(asyncContext, request.getInputStream(), response, documentService, documentId);
+            request.getInputStream().setReadListener(documentServletReadListener);
 
 
-		} catch (DocuservServiceException e) {
-			LOGGER.error(e);
-			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-		}
-	}
+//            LOGGER.error(e);
+//            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 
-	private String extractDocumentId(String requestUrl) throws DocumentServletException {
-		if (requestUrl == null || requestUrl.length() == 0 || requestUrl.endsWith("/")) {
-			throw new DocumentServletException("Malformed document request");
-		}
-		return requestUrl.substring(requestUrl.lastIndexOf("/") + 1, requestUrl.length());
-	}
+    }
 
-
-	//This could be much more slick if we had servlet 3.1 for async handlers.
-	private void handleFileDownload(String documentId, OutputStream outputStream) throws DocumentServletException {
-
-		try {
-			Document document = getDocumentService().retrieveDocumentById(documentId);
-			IOUtils.copyLarge(document.getDocumentInputStream(), outputStream);
-		} catch (IOException e) {
-			throw new DocumentServletException("IOException occurred while handling an upload for documentId: " + documentId, e);
-		} catch (DocuservDomainException e) {
-			throw new DocumentServletException("DocuservDomainException occurred while writing document input stream to response output stream for document: " + documentId, e);
-		} catch (DocuservServiceException e) {
-			throw new DocumentServletException("DocuservServiceException occurred while writing document input stream to response output stream for document: " + documentId, e);
-		}
+    private String extractDocumentId(String requestUrl) throws DocumentServletException {
+        if (requestUrl == null || requestUrl.length() == 0 || requestUrl.endsWith("/")) {
+            throw new DocumentServletException("Malformed document request");
+        }
+        return requestUrl.substring(requestUrl.lastIndexOf("/") + 1, requestUrl.length());
+    }
 
 
-	}
+    //This could be much more slick if we had servlet 3.1 for async handlers.
+    private void handleFileDownload(String documentId, OutputStream outputStream) throws DocumentServletException {
+
+        try {
+            Document document = getDocumentService().retrieveDocumentById(documentId);
+            IOUtils.copyLarge(document.getDocumentInputStream(), outputStream);
+        } catch (IOException e) {
+            throw new DocumentServletException("IOException occurred while handling an upload for documentId: " + documentId, e);
+        } catch (DocuservDomainException e) {
+            throw new DocumentServletException("DocuservDomainException occurred while writing document input stream to response output stream for document: " + documentId, e);
+        } catch (DocuservServiceException e) {
+            throw new DocumentServletException("DocuservServiceException occurred while writing document input stream to response output stream for document: " + documentId, e);
+        }
 
 
-	private String getFileName(Part part) {
-		String contentDisp = part.getHeader("content-disposition");
-		LOGGER.info("content-disposition header= " + contentDisp);
-		String[] tokens = contentDisp.split(";");
-		for (String token : tokens) {
-			if (token.trim().startsWith("filename")) {
-				return token.substring(token.indexOf("=") + 2, token.length() - 1);
-			}
-		}
-		return "";
-	}
+    }
 
-	public DocumentService getDocumentService() {
-		return documentService;
-	}
 
-	public void setDocumentService(DocumentService documentService) {
-		this.documentService = documentService;
-	}
+    private String getFileName(Part part) {
+        String contentDisp = part.getHeader("content-disposition");
+        LOGGER.info("content-disposition header= " + contentDisp);
+        String[] tokens = contentDisp.split(";");
+        for (String token : tokens) {
+            if (token.trim().startsWith("filename")) {
+                return token.substring(token.indexOf("=") + 2, token.length() - 1);
+            }
+        }
+        return "";
+    }
+
+    public DocumentService getDocumentService() {
+        return documentService;
+    }
+
+    public void setDocumentService(DocumentService documentService) {
+        this.documentService = documentService;
+    }
 }

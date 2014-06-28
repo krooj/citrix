@@ -19,6 +19,15 @@ public interface DocumentDataMapper {
     void createDocument(String documentId, InputStream documentInputStream) throws DocumentDMException;
 
     /**
+     * This will take byte[] which is opened from the caller and a Document instance.
+     *
+     * @param documentId
+     * @param documentData
+     * @throws com.krooj.docuserv.dm.DocumentDMException
+     */
+    void createDocument(String documentId, byte[] documentData) throws DocumentDMException;
+
+    /**
      * Returns a {@link com.krooj.docuserv.domain.Document} via it's id. A {@link com.krooj.docuserv.dm.DocumentDMException}
      * is thrown if no document can be found.
      *

@@ -44,6 +44,17 @@ public class DocumentServiceImpl implements DocumentService{
     }
 
     @Override
+    public void createDocument(String documentId, byte[] documentContent) throws DocuservServiceException {
+        validateNotNullOrEmpty(documentId, "documentId may not be empty or null");
+        validateNotNull(documentContent, "documentContent may not be null");
+        try{
+            getDocumentDataMapper().createDocument(documentId, documentContent);
+        }catch (DocumentDMException e){
+            throw new DocuservServiceException("DocumentDMException occurred while trying to create Document: "+documentId, e);
+        }
+    }
+
+    @Override
     public Document retrieveDocumentById(String documentId) throws DocuservServiceException {
         validateNotNullOrEmpty(documentId, "documentId may not be empty or null");
         try{
