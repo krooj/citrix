@@ -75,7 +75,7 @@ public abstract class Document {
         return true;
     }
 
-    public abstract InputStream getDocumentInputStream() throws DocuservDomainException;
+    public abstract InputStream getDocumentInputStream() throws DocuservDomainException ;
 
     @Override
     public int hashCode() {

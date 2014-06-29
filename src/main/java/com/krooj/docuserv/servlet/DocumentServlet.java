@@ -1,17 +1,12 @@
 package com.krooj.docuserv.servlet;
 
-import com.krooj.docuserv.domain.Document;
-import com.krooj.docuserv.domain.DocuservDomainException;
 import com.krooj.docuserv.service.DocumentService;
 import com.krooj.docuserv.service.DocuservServiceException;
-import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.inject.Inject;
 import javax.servlet.AsyncContext;
-import javax.servlet.AsyncEvent;
-import javax.servlet.AsyncListener;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -19,7 +14,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
 import java.io.IOException;
-import java.io.OutputStream;
 
 /**
  * This servlet provides a very basic RESTful interface to a document store without
@@ -38,11 +32,11 @@ public class DocumentServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
 
         try {
-            String documentId = extractDocumentId(request.getRequestURI());
+            final String documentId = extractDocumentId(request.getRequestURI());
             LOGGER.info("Got GET request for document: " + documentId + " from host: " + request.getRemoteHost());
-
-            //Specifically do not set the response type. We have no idea what it is..
-            handleFileDownload(documentId, response.getOutputStream());
+            final AsyncContext asyncContext = request.startAsync();
+            DocumentServletWriteListener documentServletWriteListener = new DocumentServletWriteListener(asyncContext, response.getOutputStream(), documentService, documentId);
+            response.getOutputStream().setWriteListener(documentServletWriteListener);
 
         } catch (DocumentServletException e) {
             LOGGER.error(e);
@@ -100,30 +94,9 @@ public class DocumentServlet extends HttpServlet {
             LOGGER.info("Got POST request for document: " + documentId + " from host: " + request.getRemoteHost());
 
             AsyncContext asyncContext = request.startAsync();
-            asyncContext.addListener(new AsyncListener() {
-                public void onComplete(AsyncEvent event) throws IOException {
-
-                }
-
-                public void onError(AsyncEvent event) {
-                    DocumentServlet.LOGGER.error("An exception occurred while processing POST of documentId: "+documentId, event.getThrowable());
-                    ((HttpServletResponse)event.getSuppliedResponse()).setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                }
-
-                public void onStartAsync(AsyncEvent event) {
-                    DocumentServlet.LOGGER.info("Started async listener for Document servlet POST");
-                }
-
-                public void onTimeout(AsyncEvent event) {
-                    DocumentServlet.LOGGER.error("Timeout occurred in Document servlet listener",event.getThrowable());
-                }
-            });
             DocumentServletReadListener documentServletReadListener = new DocumentServletReadListener(asyncContext, request.getInputStream(), response, documentService, documentId);
             request.getInputStream().setReadListener(documentServletReadListener);
 
-
-//            LOGGER.error(e);
-//            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 
     }
 
@@ -133,25 +106,6 @@ public class DocumentServlet extends HttpServlet {
         }
         return requestUrl.substring(requestUrl.lastIndexOf("/") + 1, requestUrl.length());
     }
-
-
-    //This could be much more slick if we had servlet 3.1 for async handlers.
-    private void handleFileDownload(String documentId, OutputStream outputStream) throws DocumentServletException {
-
-        try {
-            Document document = getDocumentService().retrieveDocumentById(documentId);
-            IOUtils.copyLarge(document.getDocumentInputStream(), outputStream);
-        } catch (IOException e) {
-            throw new DocumentServletException("IOException occurred while handling an upload for documentId: " + documentId, e);
-        } catch (DocuservDomainException e) {
-            throw new DocumentServletException("DocuservDomainException occurred while writing document input stream to response output stream for document: " + documentId, e);
-        } catch (DocuservServiceException e) {
-            throw new DocumentServletException("DocuservServiceException occurred while writing document input stream to response output stream for document: " + documentId, e);
-        }
-
-
-    }
-
 
     private String getFileName(Part part) {
         String contentDisp = part.getHeader("content-disposition");

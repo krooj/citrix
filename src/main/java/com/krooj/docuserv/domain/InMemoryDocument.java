@@ -32,7 +32,7 @@ public class InMemoryDocument extends Document {
     }
 
 	@Override
-	public InputStream getDocumentInputStream() {
+	public InputStream getDocumentInputStream() throws DocuservDomainException  {
 		return new ByteArrayInputStream(getDocumentContents());
 	}
 }

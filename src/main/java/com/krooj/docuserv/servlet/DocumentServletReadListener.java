@@ -2,7 +2,6 @@ package com.krooj.docuserv.servlet;
 
 import com.krooj.docuserv.service.DocumentService;
 import com.krooj.docuserv.service.DocuservServiceException;
-import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -48,8 +47,14 @@ public class DocumentServletReadListener implements ReadListener{
 	@Override
 	public void onDataAvailable() throws IOException {
 
+        byte[] buffer = new byte[1024];
         while (getInputStream().isReady()) {
-            IOUtils.copy(getInputStream(),getByteArrayOutputStream());
+            int length = getInputStream().read(buffer);
+            if(length<0){
+                getAsyncContext().complete();
+                return;
+            }
+            getByteArrayOutputStream().write(buffer);
         }
 	}
 

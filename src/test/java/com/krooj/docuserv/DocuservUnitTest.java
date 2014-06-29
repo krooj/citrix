@@ -1,9 +1,9 @@
 package com.krooj.docuserv;
 
+import org.apache.commons.io.IOUtils;
+
 import java.io.IOException;
 import java.io.InputStream;
-
-import org.apache.commons.io.IOUtils;
 
 /**
  * Top-level abstract class to house all common test constants
@@ -11,9 +11,9 @@ import org.apache.commons.io.IOUtils;
  */
 public abstract class DocuservUnitTest {
 
-    protected static final String DOCUMENT_ID = "test.bar";
-    protected static final String DOCUMENT_PATH = "/static/documents";
-    protected static final String TEST_DOCUMENT = "/testDocument.txt";
+    public static final String DOCUMENT_ID = "test.bar";
+    public static final String DOCUMENT_PATH = "/static/documents";
+    public static final String TEST_DOCUMENT = "/testDocument.txt";
 
 	protected byte[] loadTestDocumentAsByteArray() throws Exception{
 		try (
