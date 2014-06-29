@@ -16,16 +16,16 @@ import java.io.InputStream;
 /**
  * Created by michaelk on 2014-06-28.
  */
-public class DocumentServletWriteListener implements WriteListener{
+public class DocumentServletGETListener implements WriteListener{
 
     private AsyncContext asyncContext;
     private ServletOutputStream servletOutputStream;
     private DocumentService documentService;
     private Document document;
 
-    private final static Logger LOGGER = LogManager.getLogger(DocumentServletWriteListener.class.getName());
+    private final static Logger LOGGER = LogManager.getLogger(DocumentServletGETListener.class.getName());
 
-    public DocumentServletWriteListener(AsyncContext asyncContext, ServletOutputStream servletOutputStream, DocumentService documentService, String documentId) throws DocumentServletException {
+    public DocumentServletGETListener(AsyncContext asyncContext, ServletOutputStream servletOutputStream, DocumentService documentService, String documentId) throws DocumentServletException {
         setAsyncContext(asyncContext);
         setServletOutputStream(servletOutputStream);
         setDocumentService(documentService);

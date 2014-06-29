@@ -12,7 +12,6 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.Part;
 import java.io.IOException;
 
 /**
@@ -21,10 +20,11 @@ import java.io.IOException;
  *
  * @author Michael Kuredjian
  */
-@WebServlet(name = "document-servlet", urlPatterns = {"/storage/documents/*", "/storage/documents"}, asyncSupported = true)
+@WebServlet(name = "document-servlet", urlPatterns = { "/storage/documents/*", "/storage/documents" }, asyncSupported = true)
 public class DocumentServlet extends HttpServlet {
 
     private final static Logger LOGGER = LogManager.getLogger(DocumentServlet.class.getName());
+
     @Inject
     private DocumentService documentService;
 
@@ -35,10 +35,11 @@ public class DocumentServlet extends HttpServlet {
             final String documentId = extractDocumentId(request.getRequestURI());
             LOGGER.info("Got GET request for document: " + documentId + " from host: " + request.getRemoteHost());
             final AsyncContext asyncContext = request.startAsync();
-            DocumentServletWriteListener documentServletWriteListener = new DocumentServletWriteListener(asyncContext, response.getOutputStream(), documentService, documentId);
-            response.getOutputStream().setWriteListener(documentServletWriteListener);
+            DocumentServletGETListener documentServletPOSTListener = new DocumentServletGETListener(asyncContext, response.getOutputStream(), documentService, documentId);
+            response.getOutputStream().setWriteListener(documentServletPOSTListener);
 
-        } catch (DocumentServletException e) {
+        }
+        catch (DocumentServletException e) {
             LOGGER.error(e);
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         }
@@ -54,7 +55,8 @@ public class DocumentServlet extends HttpServlet {
             getDocumentService().deleteDocument(documentId);
 
             response.setStatus(HttpServletResponse.SC_NO_CONTENT);
-        } catch (DocuservServiceException | DocumentServletException e) {
+        }
+        catch (DocuservServiceException | DocumentServletException e) {
             LOGGER.error(e);
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         }
@@ -64,18 +66,12 @@ public class DocumentServlet extends HttpServlet {
     @Override
     protected void doPut(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
 
-        try {
-            Part filePart = request.getPart("document");
-            String documentId = getFileName(filePart);
-            LOGGER.info("Got PUT request for document: " + documentId + " from host: " + request.getRemoteHost());
+        final String documentId = request.getHeader("x-documentid");
+        LOGGER.info("Got PUT request for document: " + documentId + " from host: " + request.getRemoteHost());
 
-            getDocumentService().updateDocument(documentId, filePart.getInputStream());
-
-            response.setStatus(HttpServletResponse.SC_NO_CONTENT);
-        } catch (DocuservServiceException e) {
-            LOGGER.error(e);
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-        }
+        AsyncContext asyncContext = request.startAsync();
+        DocumentServletPUTListener documentServletPUTListener = new DocumentServletPUTListener(asyncContext, request.getInputStream(), response, documentService, documentId);
+        request.getInputStream().setReadListener(documentServletPUTListener);
     }
 
     /**
@@ -90,12 +86,12 @@ public class DocumentServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         // Create path components to save the file
 
-            final String documentId = request.getHeader("x-documentid");
-            LOGGER.info("Got POST request for document: " + documentId + " from host: " + request.getRemoteHost());
+        final String documentId = request.getHeader("x-documentid");
+        LOGGER.info("Got POST request for document: " + documentId + " from host: " + request.getRemoteHost());
 
-            AsyncContext asyncContext = request.startAsync();
-            DocumentServletReadListener documentServletReadListener = new DocumentServletReadListener(asyncContext, request.getInputStream(), response, documentService, documentId);
-            request.getInputStream().setReadListener(documentServletReadListener);
+        AsyncContext asyncContext = request.startAsync();
+        DocumentServletPOSTListener documentServletPOSTListener = new DocumentServletPOSTListener(asyncContext, request.getInputStream(), response, documentService, documentId);
+        request.getInputStream().setReadListener(documentServletPOSTListener);
 
 
     }
@@ -105,18 +101,6 @@ public class DocumentServlet extends HttpServlet {
             throw new DocumentServletException("Malformed document request");
         }
         return requestUrl.substring(requestUrl.lastIndexOf("/") + 1, requestUrl.length());
-    }
-
-    private String getFileName(Part part) {
-        String contentDisp = part.getHeader("content-disposition");
-        LOGGER.info("content-disposition header= " + contentDisp);
-        String[] tokens = contentDisp.split(";");
-        for (String token : tokens) {
-            if (token.trim().startsWith("filename")) {
-                return token.substring(token.indexOf("=") + 2, token.length() - 1);
-            }
-        }
-        return "";
     }
 
     public DocumentService getDocumentService() {

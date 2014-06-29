@@ -3,13 +3,13 @@ docuserv
 
 EXECUTION
 ========
-mvn clean install tomcat7:exec-war && java -jar target/docuserv-1.0-war-exec.jar
+mvn clean install 
 
 TESTS
 ========
 ```text
-curl -v -X POST -F document=@sample.txt http://localhost:8080/storage/documents
-curl -v -X PUT -F document=@sample.txt http://localhost:8080/storage/documents
+curl -i -v -X POST -H "x-documentid:sample.txt" --data-binary "@sample.txt" -H "Content-Type: application/octet-stream" http://localhost:8080/storage/documents
+curl -i -v -X PUT -H "x-documentid:sample.txt" --data-binary "@sample.txt" -H "Content-Type: application/octet-stream" http://localhost:8080/storage/documents
 curl -v http://localhost:8080/storage/documents/sample.txt
 curl -v -X DELETE http://localhost:8080/storage/documents/sample.txt
 

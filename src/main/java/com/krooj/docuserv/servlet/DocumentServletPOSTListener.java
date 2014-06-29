@@ -19,9 +19,9 @@ import java.io.IOException;
  *
  * @author Michael Kuredjian
  */
-public class DocumentServletReadListener implements ReadListener{
+public class DocumentServletPOSTListener implements ReadListener{
 
-    private final static Logger LOGGER = LogManager.getLogger(DocumentServletReadListener.class.getName());
+    private final static Logger LOGGER = LogManager.getLogger(DocumentServletPOSTListener.class.getName());
 
 	private AsyncContext asyncContext;
 	private ServletInputStream inputStream;
@@ -30,7 +30,7 @@ public class DocumentServletReadListener implements ReadListener{
 	private String documentId;
     private ByteArrayOutputStream byteArrayOutputStream;
 
-	public DocumentServletReadListener(AsyncContext asyncContext, ServletInputStream inputStream, HttpServletResponse response, DocumentService documentService, String documentId) {
+	public DocumentServletPOSTListener(AsyncContext asyncContext, ServletInputStream inputStream, HttpServletResponse response, DocumentService documentService, String documentId) {
 		setAsyncContext(asyncContext);
 		setInputStream(inputStream);
 		setResponse(response);
